@@ -77,69 +77,42 @@ let gray n =
   List.rev (List.map lsc (binary_gen n));;
 
 (* 43rd *)
-let rec is_sort list =
-  match list with
-  | [] -> true
-  | [x] -> true
-  | h :: t -> (h >= (List.hd t)) && (is_sort t);;
-
-let is_pair_list_sort list =
-  let aux = (fun (x , y) -> y) in
-  if is_sort (List.map aux list) then true else false;;
-
-let sort_pair_list list =
-  let rec aux l =
-    match l with
-    | [] -> []
-    | [x] -> l
-    | h :: t ->
-      let a = List.hd t in
-      let y = List.tl t in
-      if snd h < snd a then a :: (aux (h :: y))
-      else h :: (aux t)
-  in
-  if is_pair_list_sort (aux list) then aux list else List.rev (aux (aux list));;
-
 type 'a tree =
   | Lf of 'a * int
   | Br of ('a tree * 'a tree) * int;;
 
-let node tr1 tr2 =
+let merge tr1 tr2 =
   match tr1, tr2 with
   | Lf (_ , n1), Lf (_ , n2) -> Br ((tr1, tr2), (n1 + n2))
   | Lf (_ , n1), Br ((_ , _) , n2) -> Br ((tr1, tr2), (n1 + n2))
   | Br ((_ , _) , n1), Lf (_ , n2) -> Br ((tr1, tr2), (n1 + n2))
   | Br ((_ , _) , n1), Br ((_ , _) , n2) -> Br ((tr1, tr2), (n1 + n2));;
 
+let get_int x =
+  match x with
+  | Lf (_ , i) -> i
+  | Br ((_ , _) , i) -> i;;
+
 let rec sort list =
-  let get_int x =
-    match x with
-    | Lf (_ , i) -> i
-    | Br ((_ , _) , i) -> i
-  in
-  let rec more x list =
+  let rec divide x list =
     match list with
-    | [] -> []
-    | h :: t -> if get_int h >= x
-               then h :: (more x t)
-               else more x t
-  in
-  let rec less x list =
-    match list with
-    | [] -> []
+    | [] -> ([] , [])
     | h :: t -> if get_int h < x
-               then h :: (less x t)
-               else less x t
+               then (h :: (fst (divide x t)) , snd (divide x t))
+               else (fst (divide x t) , h :: (snd (divide x t)))
   in
   match list with
   | [] -> []
-  | h :: _ -> let i = get_int h in
-             (sort (less i list))
-             @ (h :: (sort (more i list)));;
+  | h :: t -> let i = get_int h in
+             (sort (fst (divide i t)))
+             @ [h]
+             @ (sort (snd (divide i t)));;
 
-let huffman_tree list =
-  let rec aux list tr =
-    match list, tr with
-    | [] , _ -> tr
-    | (c , f) :: t ,  -> aux t (Lf c f)
-    | (c , f) :: t , Lf c' f' ->
+let rec huffman_tree = function
+    | [] -> assert false
+    | [x] -> x
+    | x :: (y :: t) -> huffman_tree (sort ((merge x y) :: t));;
+
+let rec tag = function
+  | Br ((Lf (s1 , n1) , Lf (s2 , n2)) , _) -> ((s1 , "0") , (s2 , "1"))
+  | Br ((Lf (s1 , n1) , Br (x1 , n2)) , _) -> ((s1 , "0") , (tag (Br (x1 , n2)) , "1"));;
