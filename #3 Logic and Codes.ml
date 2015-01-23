@@ -77,21 +77,21 @@ let gray n =
   List.rev (List.map lsc (binary_gen n));;
 
 (* 43rd *)
-type 'a tree =
-  | Lf of 'a * int
-  | Br of ('a tree * 'a tree) * int;;
+type ('a , 'b) tree =
+  | Lf of 'a * 'b
+  | Br of ('a , 'b) tree * 'b * ('a , 'b) tree;;
 
 let merge tr1 tr2 =
   match tr1, tr2 with
-  | Lf (_ , n1), Lf (_ , n2) -> Br ((tr1, tr2), (n1 + n2))
-  | Lf (_ , n1), Br ((_ , _) , n2) -> Br ((tr1, tr2), (n1 + n2))
-  | Br ((_ , _) , n1), Lf (_ , n2) -> Br ((tr1, tr2), (n1 + n2))
-  | Br ((_ , _) , n1), Br ((_ , _) , n2) -> Br ((tr1, tr2), (n1 + n2));;
+  | Lf (_ , n1), Lf (_ , n2) -> Br (tr1, (n1 + n2), tr2)
+  | Lf (_ , n1), Br (_ , n2, _) -> Br (tr1, (n1 + n2), tr2)
+  | Br (_ , n1 , _), Lf (_ , n2) -> Br (tr1, (n1 + n2), tr2)
+  | Br (_ , n1 , _), Br (_ , n2, _) -> Br (tr1, (n1 + n2), tr2);;
 
 let get_int x =
   match x with
   | Lf (_ , i) -> i
-  | Br ((_ , _) , i) -> i;;
+  | Br (_ , i, _) -> i;;
 
 let rec sort list =
   let rec divide x list =
@@ -110,9 +110,13 @@ let rec sort list =
 
 let rec huffman_tree = function
     | [] -> assert false
-    | [x] -> x
-    | x :: (y :: t) -> huffman_tree (sort ((merge x y) :: t));;
+    | x :: [] -> x
+    | x :: y :: t -> huffman_tree (sort ((merge x y) :: t));;
 
-let rec tag = function
-  | Br ((Lf (s1 , n1) , Lf (s2 , n2)) , _) -> ((s1 , "0") , (s2 , "1"))
-  | Br ((Lf (s1 , n1) , Br (x1 , n2)) , _) -> ((s1 , "0") , (tag (Br (x1 , n2)) , "1"));;
+let huffman list =
+  let tr = huffman_tree (sort (List.map (fun (x , y) -> Lf (x , y)) list)) in
+  let rec aux at = function
+  | Lf(x, _) -> [(x, at)]
+  | Br(l, _, r) -> aux ("0" :: at) l @ aux ("1" :: at) r
+  in
+  List.map (fun (x , y) -> (x , String.concat "" (List.rev y))) (aux [] tr);;
