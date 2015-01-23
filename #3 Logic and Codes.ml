@@ -98,20 +98,45 @@ let sort_pair_list list =
   if is_pair_list_sort (aux list) then aux list else List.rev (aux (aux list));;
 
 type 'a tree =
-  | Nl
   | Lf of 'a * int
-  | Br of 'a tree * 'a tree * int;;
+  | Br of ('a tree * 'a tree) * int;;
 
 let node tr1 tr2 =
   match tr1, tr2 with
-  | Lf (_ , n1), Lf (_ , n2) -> Br (tr1, tr2, (n1 + n2))
-  | Lf (_ , n1), Br (_ , _ , n2) -> Br (tr1, tr2, (n1 + n2))
-  | Br (_ , _ , n1), Lf (_ , n2) -> Br (tr1, tr2, (n1 + n2))
-  | Br (_ , _ , n1), Br (_ , _ , n2) -> Br (tr1, tr2, (n1 + n2));;
+  | Lf (_ , n1), Lf (_ , n2) -> Br ((tr1, tr2), (n1 + n2))
+  | Lf (_ , n1), Br ((_ , _) , n2) -> Br ((tr1, tr2), (n1 + n2))
+  | Br ((_ , _) , n1), Lf (_ , n2) -> Br ((tr1, tr2), (n1 + n2))
+  | Br ((_ , _) , n1), Br ((_ , _) , n2) -> Br ((tr1, tr2), (n1 + n2));;
+
+let rec sort list =
+  let get_int x =
+    match x with
+    | Lf (_ , i) -> i
+    | Br ((_ , _) , i) -> i
+  in
+  let rec more x list =
+    match list with
+    | [] -> []
+    | h :: t -> if get_int h >= x
+               then h :: (more x t)
+               else more x t
+  in
+  let rec less x list =
+    match list with
+    | [] -> []
+    | h :: t -> if get_int h < x
+               then h :: (less x t)
+               else less x t
+  in
+  match list with
+  | [] -> []
+  | h :: _ -> let i = get_int h in
+             (sort (less i list))
+             @ (h :: (sort (more i list)));;
 
 let huffman_tree list =
   let rec aux list tr =
     match list, tr with
     | [] , _ -> tr
-    | (c , f) :: t , Nl -> aux t (Lf c f)
+    | (c , f) :: t ,  -> aux t (Lf c f)
     | (c , f) :: t , Lf c' f' ->
