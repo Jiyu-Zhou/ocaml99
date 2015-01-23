@@ -33,30 +33,46 @@ let test40 = table2 "a" "b" (And(Var "a", Or(Var "a", Var "b"))) =
               (false, false, false); (false, true, false); ]
 
 (* 41st *)
-exception ItemNotFound;;
-let rec find list str =
-  if list = [] then raise ItemNotFound
-  else if fst (List.hd list) = str then snd (List.hd list)
-  else find (List.tl list) str;;
+exception ItemNotFound
 
-let rec eval list expr =
-  match expr with
-  | Var x -> find list x
-  | Not x -> not (eval list x)
-  | And(x1 , x2) -> eval list x1 && eval list x2
-  | Or(x1 , x2) -> eval list x1 || eval list x2;;
+let rec find str assoc =
+  List.assoc str assoc
 
-let rec pattern list =
-  match list with
+let rec eval list = function
+  | Var x -> find x list
+  | Not e -> not (eval list e)
+  | And(e1 , e2) -> eval list e1 && eval list e2
+  | Or(e1 , e2) -> eval list e1 || eval list e2
+
+let rec pattern = function
   | [] -> []
-  | [x] -> [[(x , true)];[(x , false)]]
+  | [x] -> [[(x , true)]; [(x , false)]]
   | h :: t ->
     let sub = pattern t in
-    (List.map (fun l -> (h , true) :: l) sub)
-    @ (List.map (fun l -> (h , false) :: l) sub);;
+    let cons x l = x :: l in
+    (List.map (cons (h , true)) sub)
+    @ (List.map (cons (h , false)) sub)
 
-let table list expr =
-  List.map (fun x -> (x , eval x expr)) (pattern list);;
+let table vars expr =
+  let f x = (x , eval x expr) in
+  List.map f @@ pattern vars
+
+let test41_1 =
+  table ["a"; "b"] (And(Var "a", Or(Var "a", Var "b"))) =
+  [([("a", true); ("b", true)], true); ([("a", true); ("b", false)], true);
+   ([("a", false); ("b", true)], false); ([("a", false); ("b", false)], false)]
+
+let test41_2 =
+  let a = Var "a" and b = Var "b" and c = Var "c" in
+  table ["a"; "b"; "c"] (Or(And(a, Or(b,c)), Or(And(a,b), And(a,c)))) =
+  [([("a", true); ("b", true); ("c", true)], true);
+   ([("a", true); ("b", true); ("c", false)], true);
+   ([("a", true); ("b", false); ("c", true)], true);
+   ([("a", true); ("b", false); ("c", false)], false);
+   ([("a", false); ("b", true); ("c", true)], false);
+   ([("a", false); ("b", true); ("c", false)], false);
+   ([("a", false); ("b", false); ("c", true)], false);
+   ([("a", false); ("b", false); ("c", false)], false)]
 
 (* 42nd *)
 let rec binary_gen n =
@@ -121,21 +137,21 @@ let rec sort list =
     match list with
     | [] -> []
     | h :: t -> if get_int h >= x
-               then h :: (more x t)
-               else more x t
+      then h :: (more x t)
+      else more x t
   in
   let rec less x list =
     match list with
     | [] -> []
     | h :: t -> if get_int h < x
-               then h :: (less x t)
-               else less x t
+      then h :: (less x t)
+      else less x t
   in
   match list with
   | [] -> []
   | h :: _ -> let i = get_int h in
-             (sort (less i list))
-             @ (h :: (sort (more i list)));;
+    (sort (less i list))
+    @ (h :: (sort (more i list)));;
 
 let huffman_tree list =
   let rec aux list tr =
